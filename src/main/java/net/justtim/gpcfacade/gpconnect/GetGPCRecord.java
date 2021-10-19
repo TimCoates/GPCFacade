@@ -27,6 +27,7 @@ import com.auth0.jwt.exceptions.JWTCreationException;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +40,6 @@ import org.hl7.fhir.dstu3.model.Identifier;
 import org.hl7.fhir.dstu3.model.Parameters;
 import org.hl7.fhir.dstu3.model.ResourceType;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
-import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.MedicationStatement;
@@ -71,7 +71,7 @@ public class GetGPCRecord {
         List<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> entries = GPCRecord.getEntry();
 
         // First we get the CodeableConcepts out of all MedicationResources
-        Hashtable<String, CodeableConcept> medConcepts = getMedications(ctx, entries);
+        Hashtable<String, Medication> medConcepts = getMedications(ctx, entries);
 
         Iterator<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> iterator = entries.iterator();
         List<BundleEntryComponent> newEntries = new ArrayList<BundleEntryComponent>();
@@ -94,9 +94,14 @@ public class GetGPCRecord {
 
                     // Here we need to find the matching Medication in medConcepts
                     String medicationID = newOne.getMedicationReference().getReference().split("/")[1];
-                    CodeableConcept codeableMedication = medConcepts.get(medicationID);
-                    LOG.info("Setting medicationCodeableConcept:" + medicationID + " for " + newOne.getId());
-                    newOne.getMedicationCodeableConcept().setCoding(codeableMedication.getCoding());
+                    Medication thisMedication = medConcepts.get(medicationID);
+                    if (thisMedication != null) {
+                        LOG.info("Using Medication");
+                        LOG.info("Setting medicationCodeableConcept:" + medicationID + " for " + newOne.getId());
+                        newOne.getMedicationCodeableConcept().setCoding(thisMedication.getCode().getCoding());
+                    } else {
+                        LOG.info("Got null when looking for key: " + medicationID);
+                    }
 
                     BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
                     LOG.info("Adding an R4 MedicationRequest to the list");
@@ -309,9 +314,9 @@ public class GetGPCRecord {
      * @param resourceList
      * @return
      */
-    public Hashtable<String, CodeableConcept> getMedications(FhirContext ctx, List<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> resourceList) {
-        Hashtable<String, CodeableConcept> hm = new Hashtable<String, CodeableConcept>();
-        IParser parser = ctx.newJsonParser();
+    public Hashtable<String, Medication> getMedications(FhirContext ctx, List<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> resourceList) {
+        Hashtable<String, Medication> hm = new Hashtable<>();
+
         Iterator<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> iterator = resourceList.iterator();
         while (iterator.hasNext()) {
             org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent entry = iterator.next();
@@ -319,14 +324,19 @@ public class GetGPCRecord {
             if (r.toString().equals("Medication")) {
                 org.hl7.fhir.dstu3.model.Medication resource = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
                 Medication r4Resource = convertMedicationToR4(ctx, resource);
-                String id = r4Resource.getId();
+                String id = r4Resource.getId().split("/")[1];
                 LOG.info("Adding CodeableConcept to the Hashtable for Medication: " + id);
-                CodeableConcept code = r4Resource.getCode();
-                LOG.info("CodeableConcept" + code.toString());
-                LOG.info("CodeableConcept" + code.getText());
-                hm.put(id, code);
+                hm.put(id, r4Resource);
             }
         }
+        // iterate using enumeration object
+        Enumeration<String> enumeration = hm.keys();
+        LOG.info("Hashtable has these:");
+        while (enumeration.hasMoreElements()) {
+            String key = enumeration.nextElement();
+            System.out.println("Medication/[" + key + "]");
+        }
+        LOG.info("Hashtable had those.");
         return hm;
     }
 
