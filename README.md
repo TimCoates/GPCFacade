@@ -23,8 +23,19 @@ This repo contains the source code to build a Java Servlet WAR that does the fol
 * Updates the [MedicationRequest.subject](https://www.hl7.org/fhir/medicationrequest-definitions.html#MedicationRequest.subject) field to point to the [PDS](https://digital.nhs.uk/developer/api-catalogue/personal-demographics-service-fhir) resource representing the Patient.
 * Returns the converted resources as a searchset FHIR R4 Bundle.
 
+## Usage
 Example query:
 `http://[WAR Servlet host URL]/MedicationRequest?patient=https://fhir.nhs.uk/Id/nhs-number%7f9690937316`
+
+
+## OpenAPI
+When run, the WAR provides OpenAPI 3.0 Documentation of the server at:
+
+`http://[WAR Servlet host URL]/api-docs`.
+
+A [Swagger UI](https://swagger.io/tools/swagger-ui/) tool served at:
+
+`http://[WAR Servlet host URL]/swagger-ui/`
 
 
 ## To do:
