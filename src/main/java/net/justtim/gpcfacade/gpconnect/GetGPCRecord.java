@@ -27,6 +27,7 @@ import com.auth0.jwt.exceptions.JWTCreationException;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ import org.hl7.fhir.dstu3.model.Identifier;
 import org.hl7.fhir.dstu3.model.Parameters;
 import org.hl7.fhir.dstu3.model.ResourceType;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.MedicationStatement;
@@ -67,6 +69,10 @@ public class GetGPCRecord {
 
         // Here we're going to iterate over the resources...
         List<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> entries = GPCRecord.getEntry();
+
+        // First we get the CodeableConcepts out of all MedicationResources
+        Hashtable<String, CodeableConcept> medConcepts = getMedications(ctx, entries);
+
         Iterator<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> iterator = entries.iterator();
         List<BundleEntryComponent> newEntries = new ArrayList<BundleEntryComponent>();
         int total = 0;
@@ -85,23 +91,29 @@ public class GetGPCRecord {
                     LOG.info("Converting to R4");
                     MedicationRequest newOne = convertMedicationRequestToR4(ctx, medicationRequest);
                     newOne.setSubject(subject);
+
+                    // Here we need to find the matching Medication in medConcepts
+                    String medicationID = newOne.getMedicationReference().getReference().split("/")[1];
+                    CodeableConcept codeableMedication = medConcepts.get(medicationID);
+                    LOG.info("Setting medicationCodeableConcept:" + medicationID + " for " + newOne.getId());
+                    newOne.getMedicationCodeableConcept().setCoding(codeableMedication.getCoding());
+
                     BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
-                    LOG.info("Adding to the list");
+                    LOG.info("Adding an R4 MedicationRequest to the list");
                     newEntries.add(newItem);
                     total++;
                 }
 
-                if (r.toString().equals("Medication")) {
-                    LOG.info("Got a Medication");
-                    org.hl7.fhir.dstu3.model.Medication medication = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
-                    LOG.info("Converting to R4");
-                    Medication newOne = convertMedicationToR4(ctx, medication);
-                    BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
-                    LOG.info("Adding to the list");
-                    newEntries.add(newItem);
-                    total++;
-                }
-
+                //if (r.toString().equals("Medication")) {
+                //    LOG.info("Got a Medication");
+                //    org.hl7.fhir.dstu3.model.Medication medication = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
+                //    LOG.info("Converting to R4");
+                //    Medication newOne = convertMedicationToR4(ctx, medication);
+                //    BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
+                //    LOG.info("Adding to the list");
+                //    newEntries.add(newItem);
+                //    total++;
+                //}
             }
         }
 
@@ -288,6 +300,34 @@ public class GetGPCRecord {
         MedicationStatement output = null;
         output = (MedicationStatement) VersionConvertor_30_40.convertResource(input, true);
         return output;
+    }
+
+    /**
+     * Method to create a Hashtable of Medication resources, keyed on their ID
+     *
+     * @param ctx
+     * @param resourceList
+     * @return
+     */
+    public Hashtable<String, CodeableConcept> getMedications(FhirContext ctx, List<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> resourceList) {
+        Hashtable<String, CodeableConcept> hm = new Hashtable<String, CodeableConcept>();
+        IParser parser = ctx.newJsonParser();
+        Iterator<org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent> iterator = resourceList.iterator();
+        while (iterator.hasNext()) {
+            org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent entry = iterator.next();
+            ResourceType r = entry.getResource().getResourceType();
+            if (r.toString().equals("Medication")) {
+                org.hl7.fhir.dstu3.model.Medication resource = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
+                Medication r4Resource = convertMedicationToR4(ctx, resource);
+                String id = r4Resource.getId();
+                LOG.info("Adding CodeableConcept to the Hashtable for Medication: " + id);
+                CodeableConcept code = r4Resource.getCode();
+                LOG.info("CodeableConcept" + code.toString());
+                LOG.info("CodeableConcept" + code.getText());
+                hm.put(id, code);
+            }
+        }
+        return hm;
     }
 
 }
