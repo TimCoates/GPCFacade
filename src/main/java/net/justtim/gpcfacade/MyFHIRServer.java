@@ -24,6 +24,7 @@ import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import net.justtim.gpcfacade.providers.MedicationRequestProvider;
+import net.justtim.gpcfacade.providers.MedicationStatementProvider;
 
 /**
  *
@@ -41,7 +42,7 @@ public class MyFHIRServer extends RestfulServer {
 
         // Register resource providers
         List<IResourceProvider> providers = new ArrayList<>();
-        //providers.add(new EncounterProvider(ctx));
+        providers.add(new MedicationStatementProvider(ctx));
         providers.add(new MedicationRequestProvider(ctx));
         setResourceProviders(providers);
 

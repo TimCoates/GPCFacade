@@ -40,6 +40,7 @@ import org.hl7.fhir.dstu3.model.ResourceType;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.MedicationStatement;
 import org.hl7.fhir.r4.model.Reference;
 
 /**
@@ -53,7 +54,7 @@ public class GetGPCRecord {
     public GetGPCRecord() {
     }
 
-    public org.hl7.fhir.r4.model.Bundle call(String NHSNumber) {
+    public org.hl7.fhir.r4.model.Bundle call(String NHSNumber, String resourceType) {
         LOG.info("Ready to call for NHS Number");
         // We're going to be returning a Bundle result set...
         org.hl7.fhir.r4.model.Bundle resultsList = new org.hl7.fhir.r4.model.Bundle();
@@ -72,34 +73,68 @@ public class GetGPCRecord {
 
         Reference subject = new Reference().setReference("https://api.service.nhs.uk/personal-demographics/FHIR/R4/Patient/" + NHSNumber);
 
-        while (iterator.hasNext()) {
-            org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent entry = iterator.next();
-            ResourceType r = entry.getResource().getResourceType();
+        if (resourceType.equals("MedicationRequest")) {
+            while (iterator.hasNext()) {
+                org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent entry = iterator.next();
+                ResourceType r = entry.getResource().getResourceType();
 
-            LOG.info("Got resource: " + r.toString());
-            if (r.toString().equals("MedicationRequest")) {
-                LOG.info("Got a MedicationRequest");
-                org.hl7.fhir.dstu3.model.MedicationRequest medicationRequest = (org.hl7.fhir.dstu3.model.MedicationRequest) entry.getResource();
-                LOG.info("Converting to R4");
-                MedicationRequest newOne = convertMedicationRequestToR4(ctx, medicationRequest);
-                newOne.setSubject(subject);
-                BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
-                LOG.info("Adding to the list");
-                newEntries.add(newItem);
-                total++;
+                LOG.info("Got resource: " + r.toString());
+                if (r.toString().equals("MedicationRequest")) {
+                    LOG.info("Got a MedicationRequest");
+                    org.hl7.fhir.dstu3.model.MedicationRequest medicationRequest = (org.hl7.fhir.dstu3.model.MedicationRequest) entry.getResource();
+                    LOG.info("Converting to R4");
+                    MedicationRequest newOne = convertMedicationRequestToR4(ctx, medicationRequest);
+                    newOne.setSubject(subject);
+                    BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
+                    LOG.info("Adding to the list");
+                    newEntries.add(newItem);
+                    total++;
+                }
+
+                if (r.toString().equals("Medication")) {
+                    LOG.info("Got a Medication");
+                    org.hl7.fhir.dstu3.model.Medication medication = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
+                    LOG.info("Converting to R4");
+                    Medication newOne = convertMedicationToR4(ctx, medication);
+                    BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
+                    LOG.info("Adding to the list");
+                    newEntries.add(newItem);
+                    total++;
+                }
+
             }
+        }
 
-            if (r.toString().equals("Medication")) {
-                LOG.info("Got a Medication");
-                org.hl7.fhir.dstu3.model.Medication medication = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
-                LOG.info("Converting to R4");
-                Medication newOne = convertMedicationToR4(ctx, medication);
-                BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
-                LOG.info("Adding to the list");
-                newEntries.add(newItem);
-                total++;
+        if (resourceType.equals("MedicationStatement")) {
+            while (iterator.hasNext()) {
+                org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent entry = iterator.next();
+                ResourceType r = entry.getResource().getResourceType();
+
+                LOG.info("Got resource: " + r.toString());
+                if (r.toString().equals("MedicationStatement")) {
+                    LOG.info("Got a MedicationStatement");
+                    org.hl7.fhir.dstu3.model.MedicationStatement medicationStatement = (org.hl7.fhir.dstu3.model.MedicationStatement) entry.getResource();
+                    LOG.info("Converting to R4");
+                    MedicationStatement newOne = convertMedicationStatementToR4(ctx, medicationStatement);
+                    newOne.setSubject(subject);
+                    BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
+                    LOG.info("Adding to the list");
+                    newEntries.add(newItem);
+                    total++;
+                }
+
+                if (r.toString().equals("Medication")) {
+                    LOG.info("Got a Medication");
+                    org.hl7.fhir.dstu3.model.Medication medication = (org.hl7.fhir.dstu3.model.Medication) entry.getResource();
+                    LOG.info("Converting to R4");
+                    Medication newOne = convertMedicationToR4(ctx, medication);
+                    BundleEntryComponent newItem = new BundleEntryComponent().setResource(newOne);
+                    LOG.info("Adding to the list");
+                    newEntries.add(newItem);
+                    total++;
+                }
+
             }
-
         }
         resultsList.setEntry(newEntries);
         LOG.info("call() is returning a Bundle of " + resultsList.getEntry().size() + " resources");
@@ -239,4 +274,20 @@ public class GetGPCRecord {
         output = (Medication) VersionConvertor_30_40.convertResource(input, true);
         return output;
     }
+
+    /**
+     * Method to convert a convertMedicationStatementToR4 from STU3 to R4
+     *
+     * @param ctx The STU3 context
+     * @param input The STU3 Resource
+     * @return An R4 convertMedicationStatementToR4
+     */
+    public MedicationStatement convertMedicationStatementToR4(FhirContext ctx, org.hl7.fhir.dstu3.model.MedicationStatement input) {
+        IParser parser = ctx.newJsonParser();
+        LOG.info("STU3 input:\n" + parser.encodeResourceToString(input));
+        MedicationStatement output = null;
+        output = (MedicationStatement) VersionConvertor_30_40.convertResource(input, true);
+        return output;
+    }
+
 }

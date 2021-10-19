@@ -21,31 +21,30 @@ import ca.uhn.fhir.rest.annotation.RequiredParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 import net.justtim.gpcfacade.gpconnect.GetGPCRecord;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.MedicationStatement;
 
 /**
  *
  * @author tim.coates@nhs.net
  */
-public class EncounterProvider implements IResourceProvider {
+public class MedicationStatementProvider implements IResourceProvider {
 
     FhirContext ctx;
     IParser parser;
-    private static final Logger LOG = Logger.getLogger(EncounterProvider.class.getName());
+    private static final Logger LOG = Logger.getLogger(MedicationStatementProvider.class.getName());
 
-    public EncounterProvider(FhirContext ctx) {
+    public MedicationStatementProvider(FhirContext ctx) {
         this.ctx = ctx;
         parser = ctx.newJsonParser();
     }
 
     @Override
     public Class<? extends IBaseResource> getResourceType() {
-        return Encounter.class;
+        return MedicationStatement.class;
     }
 
     /**
@@ -55,17 +54,25 @@ public class EncounterProvider implements IResourceProvider {
      * @return
      */
     @Search()
-    public List<Encounter> searchByNHSNumber(
-            @RequiredParam(name = Encounter.SP_PATIENT) TokenParam theId) {
+    public Bundle searchByNHSNumber(
+            @RequiredParam(name = MedicationStatement.SP_PATIENT) TokenParam theId) {
+        String stringVer = theId.toString();
+        LOG.info("stringVer: " + stringVer);
         String identifier = theId.getValue();
-        LOG.info("Got value: " + identifier);
+        LOG.info("Got identifier: " + identifier);
+
+        String NHSNumber = identifier.substring(identifier.length() - 10);
+        LOG.info("Got NHS Number: " + NHSNumber);
 
         // So now we're going to call GP Connect Get Structured Record for this fella...
         GetGPCRecord caller = new GetGPCRecord();
-        caller.call(identifier.split("/")[identifier.split("/").length - 1]);
+        Bundle retVal = new Bundle();
+        retVal.setType(Bundle.BundleType.SEARCHSET);
 
-        List<Encounter> retVal = new ArrayList<>();
-        // ...populate...
+        LOG.info("Calling call() function with: " + NHSNumber);
+        retVal = caller.call(NHSNumber, "MedicationStatement");
+        LOG.info("searchByNHSNumber() is returning: " + retVal.getEntry().size() + " Resources");
+        LOG.info("retVal: " + parser.encodeResourceToString(retVal));
         return retVal;
     }
 

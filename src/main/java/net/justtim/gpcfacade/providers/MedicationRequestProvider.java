@@ -70,7 +70,7 @@ public class MedicationRequestProvider implements IResourceProvider {
         retVal.setType(Bundle.BundleType.SEARCHSET);
 
         LOG.info("Calling call() function with: " + NHSNumber);
-        retVal = caller.call(NHSNumber);
+        retVal = caller.call(NHSNumber, "MedicationRequest");
         LOG.info("searchByNHSNumber() is returning: " + retVal.getEntry().size() + " Resources");
         LOG.info("retVal: " + parser.encodeResourceToString(retVal));
         return retVal;
