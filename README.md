@@ -45,6 +45,7 @@ A [Swagger UI](https://swagger.io/tools/swagger-ui/) tool served at:
 * Reuse FHIR Contexts, Parsers etc to optimise performance.
 * Expand to cover [MedicationStatement](https://www.hl7.org/fhir/medicationstatement.html#MedicationStatement) resources.
 * Look at other referenced Resources (e.g. Practitioner and Organization) in MedicationRequest to see whether they can / should be included / dropped / changed.
+* Migrate the internal / embedded FHIR Conversion from STU3 to R4 to use the NHS Digital provided [FHIR converter API](https://digital.nhs.uk/developer/api-catalogue/fhir-converter-api) (dependent on that moving to using [Parameters](https://www.hl7.org/fhir/parameters.html) for input and output).
 
 
 ### Notes
