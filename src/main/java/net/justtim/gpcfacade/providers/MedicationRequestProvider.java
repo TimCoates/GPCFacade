@@ -16,6 +16,7 @@
 package net.justtim.gpcfacade.providers;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.model.api.annotation.Description;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.RequiredParam;
 import ca.uhn.fhir.rest.annotation.Search;
@@ -53,6 +54,7 @@ public class MedicationRequestProvider implements IResourceProvider {
      * @param theId
      * @return
      */
+    @Description(example = "/MedicationStatement?patient=https://fhir.nhs.uk/Id/nhs-number%7f9690937316", shortDefinition = "This search finds all MedicationRequest resources for a given Patient")
     @Search()
     public Bundle searchByNHSNumber(
             @RequiredParam(name = MedicationRequest.SP_PATIENT) TokenParam theId) {
