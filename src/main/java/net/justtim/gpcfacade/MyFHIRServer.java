@@ -47,5 +47,6 @@ public class MyFHIRServer extends RestfulServer {
         setResourceProviders(providers);
 
         registerInterceptor(new OpenApiInterceptor());
+        registerInterceptor(new CapabilityStatementCustomizer());
     }
 }
